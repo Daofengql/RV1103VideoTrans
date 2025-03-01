@@ -1,6 +1,8 @@
-# ST7789 Camera Display System
+# RV1103VideoTrans - ST7789 Camera Display System
 
 这是一个为Luckfox Pico Mini A/B开发板设计的实时图像显示系统，使用ST7789显示器和CSI摄像头。该系统可以从摄像头捕获图像，进行预处理，并将其实时显示在ST7789 TFT LCD屏幕上。
+
+项目地址: https://github.com/Daofengql/RV1103VideoTrans
 
 ## 功能特点
 
@@ -55,11 +57,15 @@
 
 ## 安装与编译
 
-1. 安装ARMv7交叉编译工具链：
+### 交叉编译环境要求
+本项目需要使用uClibc版本的ARMv7交叉编译工具链，而非标准glibc版本。uClibc是一个为嵌入式系统优化的C库，占用空间更小，更适合Luckfox Pico Mini等资源受限的设备。
+
+1. 安装ARMv7 uClibc交叉编译工具链：
 
 ```bash
-# Debian/Ubuntu
-sudo apt-get install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+# 注意：需要使用uClibc版本的交叉编译工具链
+# 可以从Luckfox官方获取适用于Pico Mini的uClibc工具链
+# 或使用buildroot构建uClibc工具链
 ```
 
 2. 安装OpenCV依赖：
@@ -71,8 +77,8 @@ sudo apt-get install libopencv-dev
 3. 克隆代码库：
 
 ```bash
-git clone https://github.com/yourusername/st7789-camera-display.git
-cd st7789-camera-display
+git clone https://github.com/Daofengql/RV1103VideoTrans.git
+cd RV1103VideoTrans
 ```
 
 4. 编译程序：
