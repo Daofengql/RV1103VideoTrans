@@ -70,7 +70,7 @@ static const uint16_t st7789_init[] = {
     0x11, 0x80, 255,           // Exit sleep mode, 500ms delay
     0x3A, 0x81, 0x55, 10,      // COLMOD: 16-bit color, 10ms delay
     0x36, 0x01, 0xA0,          // MADCTL: RGB mode
-    0x26, 0x01, 0x07,          // 选择伽马曲线 (值范围0-7，越大越暗)
+    0x26, 0x01, 0x00,        // 选择伽马曲线 (值范围0-7，越大越暗)
     0xBA, 0x02, 0x08, 0x08,  
     0x21, 0x80, 10,            // Display inversion on, 10ms delay
     0x13, 0x80, 10,            // Normal display mode on, 10ms delay
@@ -162,7 +162,7 @@ static void send_frame_buffer(struct st7789_display *display, uint16_t *buffer) 
         struct spi_ioc_transfer xfer = {
             .tx_buf = (unsigned long)(buffer + (sent / 2)),
             .len = chunk_size,
-            .speed_hz = SPI_SPEED, // 降低SPI速度到40MHz，提高稳定性
+            .speed_hz = SPI_SPEED, // 降低SPI速度到0MHz，提高稳定性
             .delay_usecs = 0,
             .bits_per_word = 8,
         };
@@ -189,46 +189,11 @@ static inline uint16_t rgb888_to_rgb565(uint32_t rgb888) {
     return __builtin_bswap16(rgb565);
 }
 
-// 灰度世界法自动白平衡
-static void auto_white_balance(cv::Mat& image) {
-    // 分离BGR通道
-    std::vector<cv::Mat> channels;
-    cv::split(image, channels);
-    
-    // 计算每个通道的平均值
-    double b_avg = cv::mean(channels[0])[0];
-    double g_avg = cv::mean(channels[1])[0];
-    double r_avg = cv::mean(channels[2])[0];
-    
-    // 计算所有通道的平均值
-    double avg = (b_avg + g_avg + r_avg) / 3.0;
-    
-    // 计算增益系数（避免除零）
-    double k_b = b_avg > 0 ? avg / b_avg : 1.0;
-    double k_g = g_avg > 0 ? avg / g_avg : 1.0;
-    double k_r = r_avg > 0 ? avg / r_avg : 1.0;
-    
-    // 应用增益系数到各通道
-    channels[0] = channels[0] * k_b;
-    channels[1] = channels[1] * k_g;
-    channels[2] = channels[2] * k_r;
-    
-    // 合并通道
-    cv::merge(channels, image);
-}
-
 // 优化的图像处理和转换函数，添加白平衡
 static void process_and_convert_frame(cv::Mat& frame, uint16_t* display_buffer) {
-    static cv::Mat resized(SCREEN_HEIGHT, SCREEN_WIDTH, CV_8UC3);
-    
-    // 直接缩放到屏幕尺寸
-    cv::resize(frame, resized, cv::Size(SCREEN_WIDTH, SCREEN_HEIGHT), 0, 0, cv::INTER_LINEAR);
-    
-    // 应用自动白平衡
-    auto_white_balance(resized);
     
     // 使用指针直接访问像素数据，避免at<>调用开销
-    unsigned char* pixels = resized.data;
+    unsigned char* pixels = frame.data;
     for(int y = 0; y < SCREEN_HEIGHT; y++) {
         for(int x = 0; x < SCREEN_WIDTH; x++) {
             int idx = (y * SCREEN_WIDTH + x) * 3;
@@ -295,8 +260,8 @@ int main(int argc, char **argv) {
 
     // 初始化摄像头
     cv::VideoCapture cap;
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, 320);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 240);
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, SCREEN_WIDTH);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, SCREEN_HEIGHT);
     cap.set(cv::CAP_PROP_FPS, 60);
     cap.open(0);
 
@@ -314,8 +279,6 @@ int main(int argc, char **argv) {
     // 发送一个黑屏帧
     send_frame_buffer(&display, display.buffer);
     
-    // 等待显示器稳定
-    usleep(100000); // 100ms
 
     printf("开始主循环处理...\n");
     
